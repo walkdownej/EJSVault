@@ -1,6 +1,6 @@
 -- Webhook Configuration
 getgenv().whscript = "Lyez Script"
-getgenv().webhookexecUrl = "https://discord.com/api/webhooks/1387932717659984022/LiN86K_vfzY5mgOY6M2CXg2aViTYyKioNL-KCsVrbBvUHTPCt9HU38onLLibO29yVZjK" -- Your URL
+getgenv().webhookexecUrl = "https://discord.com/api/webhooks/1387988473620992133/2a_oukQ3UE4aMW268LcskZxkBtKlY6AFu1FtRK_voGUoUJ9jzr5S7iV4Lj7EHxLXf85U" -- Your URL
 getgenv().ExecLogSecret = false
 getgenv().webhookEnabled = true
 getgenv().webhookToken = "yourSecretKey123" -- Replace with a strong token
