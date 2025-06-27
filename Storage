@@ -1,156 +1,14 @@
 -- Webhook Configuration
-getgenv().whscript = "Lyez Script"
-getgenv().webhookexecUrl = "https://discord.com/api/webhooks/1387988473620992133/2a_oukQ3UE4aMW268LcskZxkBtKlY6AFu1FtRK_voGUoUJ9jzr5S7iV4Lj7EHxLXf85U" -- Your URL
-getgenv().ExecLogSecret = false
-getgenv().webhookEnabled = true
-getgenv().webhookToken = "yourSecretKey123" -- Replace with a strong token
-getgenv().originalRequest = nil
-getgenv().originalHttpGet = nil
-getgenv().originalHttpPost = nil
+getgenv().whscript = "Lyez Script" -- Customize this as needed
+getgenv().webhookexecUrl = "https://discord.com/api/webhooks/1387988473620992133/2a_oukQ3UE4aMW268LcskZxkBtKlY6AFu1FtRK_voGUoUJ9jzr5S7iV4Lj7EHxLXf85U" -- Your working URL
+getgenv().ExecLogSecret = false -- Set to true to ping a role
+getgenv().webhookEnabled = true -- Set to false to disable webhook if needed
 
--- Player Reference
-local plr = game:GetService("Players").LocalPlayer
-
--- Apply Anti-Leak Hooks Immediately
-local functions = {
-    rconsoleprint,
-    print,
-    setclipboard,
-    rconsoleerr,
-    rconsolewarn,
-    warn,
-    error
-}
-
-for i, v in next, functions do
-    if v and hookfunction then
-        local old = v
-        hookfunction(v, newcclosure(function(...)
-            local args = {...}
-            for _, arg in next, args do
-                if tostring(arg):find("https") then
-                    while true do end -- Trap infinite loop on "https"
-                end
-            end
-            return old(...)
-        end))
-    end
-end
-
--- Block _G.ID Assignment
-if _G.ID then
-    while true do end
-end
-if setmetatable then
-    setmetatable(_G, {
-        __newindex = function(t, i, v)
-            if tostring(i) == "ID" then
-                while true do end
-            end
-        end
-    })
-end
-
--- Initialize and Check HTTP Functions
-local function initializeHttpChecks()
-    getgenv().originalRequest = http_request or request or (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request)
-    getgenv().originalHttpGet = game.HttpGet
-    getgenv().originalHttpPost = game.HttpPost
-end
-
-local function checkHttpHooks()
-    local currentRequest = http_request or request or (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request)
-    local currentHttpGet = game.HttpGet
-    local currentHttpPost = game.HttpPost
-
-    if getgenv().originalRequest and currentRequest ~= getgenv().originalRequest then
-        return true
-    end
-    if getgenv().originalHttpGet and currentHttpGet ~= getgenv().originalHttpGet then
-        return true
-    end
-    if getgenv().originalHttpPost and currentHttpPost ~= getgenv().originalHttpPost then
-        return true
-    end
-    return false
-end
-
--- Safe HTTP Request Function
-local function safeRequest(params)
-    if params.Url ~= getgenv().webhookexecUrl then
-        return nil
-    end
-
-    local request = http_request or request or (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request)
-    if not request then
-        return nil
-    end
-
-    local success, response = pcall(function()
-        return request(params)
-    end)
-
-    if not success or not response then
-        return nil
-    end
-
-    return response
-end
-
--- Detect and Destroy HttpSpy GUI
-local function detectHttpSpyGui()
-    for _, gui in next, game.CoreGui:GetChildren() do
-        if gui.Name == "HttpSpy" and gui:FindFirstChild("MainFrame") then
-            gui:Destroy()
-            return true
-        end
-    end
-    return false
-end
-
--- Metatable Hook to Prevent Kicks
-if getrawmetatable and setreadonly then
-    setreadonly(getrawmetatable(game), false)
-    local mt = getrawmetatable(game) or getmetatable(game)
-    local __oldnamecall = mt.__namecall
-    mt.__namecall = newcclosure(function(self, ...)
-        local args = {...}
-        local namecallmethod = getnamecallmethod()
-        if self == plr and string.lower(namecallmethod) == "kick" then
-            wait(9e9)
-            return nil
-        end
-        return __oldnamecall(self, unpack(args))
-    end)
-    setreadonly(getrawmetatable(game), true)
-end
-
--- Webhook Function with Anti-Spy Kick
+-- Webhook Function
 local function sendWebhook()
     if not getgenv().webhookEnabled then
+        print("WEBHOOK: Disabled by user")
         return
-    end
-
-    -- Check for hooks and GUI immediately
-    if checkHttpHooks() or detectHttpSpyGui() then
-        local Players = game:GetService("Players")
-        local player = Players.LocalPlayer
-        if player then
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Anti-HTTP Spy Alert",
-                Text = "HTTP spy detected. You will be kicked.",
-                Duration = 5
-            })
-            wait(1)
-            player:Kick("HTTP spy detected. Access revoked for security.")
-        end
-        getgenv().webhookEnabled = false
-        return
-    end
-
-    -- Initialize HTTP checks on first run
-    if not getgenv().originalRequest then
-        initializeHttpChecks()
     end
 
     local HttpService = game:GetService("HttpService")
@@ -158,16 +16,18 @@ local function sendWebhook()
     local MarketplaceService = game:GetService("MarketplaceService")
     local player = Players.LocalPlayer or {Name = "Unknown"}
 
+    -- Wait for basic data to be ready
     local character = player.Character
     if not character then
         character = player.CharacterAdded:Wait()
     end
-    wait(1)
+    wait(1) -- Brief delay to ensure services are loaded
 
+    print("SCRIPT EXECUTED - Starting webhook at " .. os.date("%H:%M:%S"))
     local username = player.Name or "Unknown"
     local gameName = (pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId).Name end) and MarketplaceService:GetProductInfo(game.PlaceId).Name) or "Unknown Game"
     local executor = (identifyexecutor and identifyexecutor() or "Unknown")
-    local hwid = (gethwid and gethwid() or "N/A")
+    local hwid = (gethwid and gethwid() or "N/A") -- HWID, falls back to N/A if not available
 
     local data = {
         ["content"] = "",
@@ -183,17 +43,44 @@ local function sendWebhook()
                 {["name"] = "🔒 HWID", ["value"] = "```" .. hwid .. "```", ["inline"] = true}
             },
             ["footer"] = {["text"] = "Lyez Log | " .. os.date("%Y-%m-%d %H:%M:%S")}
-        }},
-        ["token"] = getgenv().webhookToken
+        }}
     }
 
     local newdata = HttpService:JSONEncode(data)
+    print("WEBHOOK PAYLOAD: " .. string.sub(newdata, 1, 100) .. "...")
+
     local headers = {["content-type"] = "application/json"}
-    local params = {Url = getgenv().webhookexecUrl, Body = newdata, Method = "POST", Headers = headers}
-    local response = safeRequest(params)
-    if response then
+    local request = http_request or request or (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request)
+    if request then
+        print("HTTP FUNCTION FOUND: " .. tostring(request))
+        local success, err = pcall(function()
+            local response = request({Url = getgenv().webhookexecUrl, Body = newdata, Method = "POST", Headers = headers})
+            print("HTTP RESPONSE: " .. tostring(response and response.StatusCode or "No response"))
+            return response
+        end)
+        if success then
+            print("WEBHOOK SENT SUCCESSFULLY at " .. os.date("%H:%M:%S"))
+        else
+            warn("WEBHOOK FAILED: " .. tostring(err))
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Webhook Error",
+                Text = "Failed: " .. tostring(err) .. ". Webhook disabled.",
+                Duration = 5
+            })
+            getgenv().webhookEnabled = false
+        end
     else
-        getgenv().webhookEnabled = false
+        warn("NO HTTP FUNCTION AVAILABLE at " .. os.date("%H:%M:%S"))
+        local httpTest = pcall(game.HttpGet, game, "https://httpbin.org/get")
+        if not httpTest then
+            warn("BASIC HTTP TEST FAILED: Executor likely blocks HTTP requests")
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Webhook Error",
+                Text = "Executor blocks HTTP. Webhook disabled.",
+                Duration = 5
+            })
+            getgenv().webhookEnabled = false
+        end
     end
 end
 
@@ -202,6 +89,12 @@ if getgenv().webhookEnabled then
     spawn(function()
         local success, err = pcall(sendWebhook)
         if not success then
+            print("WEBHOOK: Load failed - Error: " .. tostring(err))
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Webhook Error",
+                Text = "Load failed: " .. tostring(err) .. ". Webhook disabled.",
+                Duration = 5
+            })
             getgenv().webhookEnabled = false
         end
     end)
