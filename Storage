@@ -193,7 +193,7 @@ local function sendWebhook()
     local response = safeRequest(params)
     if response then
     else
-        getgenv().webhookEnabled = true
+        getgenv().webhookEnabled = false
     end
 end
 
