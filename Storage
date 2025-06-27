@@ -100,9 +100,6 @@ if getgenv().webhookEnabled then
     end)
 end
 
-
-
-
 -- Original Script Starts Here
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
